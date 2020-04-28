@@ -6,6 +6,13 @@ const helmet = require("helmet");
 const { NODE_ENV } = require("./config");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const passport = require("passport");
+
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const validateRegistrationInput = require("./register");
+const validateLoginInput = require("./login");
 
 const app = express();
 
@@ -21,7 +28,9 @@ mongoose.connect(
   { useNewUrlParser: true, useUnifiedTopology: true }
 );
 
-//For this, we will use an embedded document pattern where we will store the users bookmarks as an array of objects in the user schema.
+//TODO: Look up transactions and how to do them with mongo.
+//TODO: refactor into services
+//TODO: validation and type checking.
 
 const Schema = mongoose.Schema;
 
@@ -35,12 +44,16 @@ const bookmarkSchema = new Schema({
 const userSchema = new Schema({
   name: { type: String, required: true },
   username: { type: String, required: true },
+  email: { type: String, required: true },
   password: { type: String, required: true },
   bookmarks: { type: [bookmarkSchema] }, //The bookmark value defaults to an empty array implicitly.
 });
 
 const Bookmark = mongoose.model("Bookmark", bookmarkSchema);
 const User = mongoose.model("User", userSchema);
+
+app.use(passport.initialize());
+require("./passport")(passport);
 
 app.get("/", (req, res) => {
   res.send("Hello, World!");
@@ -71,6 +84,84 @@ app.post("/user", async (req, res, next) => {
     res.send(resp);
   } catch (error) {
     next(error);
+  }
+});
+
+app.post("/register", async (req, res, next) => {
+  try {
+    const { errors, isValid } = validateRegistrationInput(req.body);
+
+    if (!isValid) {
+      return res.status(400).json(errors);
+    }
+
+    const { username, password, name, email } = req.body;
+
+    let check = await User.findOne({ email });
+
+    if (check) {
+      return res.status(400).json({ email: "Email already exists" });
+    } else {
+      console.log("check passed");
+      const newUser = new User({
+        name,
+        username,
+        email,
+        password,
+      });
+
+     bcrypt.genSalt(10, async (err, salt) => {
+        console.log(newUser.password)
+        bcrypt.hash(newUser.password, salt, (err, hash) => {
+          if (err) throw err;
+          newUser.password = hash;
+          newUser.save().then(user => res.json(user)).catch(err => console.log(err))
+        });
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/login", async (req, res, next) => {
+  const { errors, isValid } = validateLoginInput(req.body);
+
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
+  const { email, password } = req.body;
+
+  let user = await User.findOne({ email: email });
+
+  if (!user) {
+    return res.status(404).json({ emailnotfound: "Email not found" });
+  }
+
+  let isMatch = await bcrypt.compare(password, user.password);
+
+  if (isMatch) {
+    const payload = {
+      id: user.id,
+      name: user.name,
+    };
+
+    jwt.sign(
+      payload,
+      "secret",
+      {
+        expiresIn: 10800,
+      },
+      (err, token) => {
+        res.json({
+          success: true,
+          token: "Bearer " + token,
+        });
+      }
+    );
+  } else {
+    return res.status(400).json({ password: "Password incorrect" });
   }
 });
 
@@ -105,20 +196,6 @@ app.post("/login", async (req, res, next) => {
   //validate, check, and process.
 });
 
-//get bookmarks is not needed, as the bookmark is an embedded document.
-/* app.get("/bookmarks", async (req, res, next) => {
-  const bookmarks = await Bookmark.find();
-  res.send(bookmarks);
-});
- */
-
-/* When we create a bookmark, we need to:
-    1. Post the bookmark document
-    2. Find the appropriate user document..
-    3. Add the bookmark to the user's bookmark collection via an update.
-    4. send the created bookmark back to the client to get added in with the id.  
-*/
-
 app.post("/bookmarks", async (req, res, next) => {
   try {
     let { title, desc, rating, url, userId } = req.body;
@@ -136,7 +213,6 @@ app.post("/bookmarks", async (req, res, next) => {
 
     //2 and 3.
 
-
     await User.updateOne({ _id: userId }, { $push: { bookmarks: mark } });
 
     //4.
@@ -146,15 +222,14 @@ app.post("/bookmarks", async (req, res, next) => {
   }
 });
 
-
 app.delete("/bookmarks/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const {userId} = req.body;
+    const { userId } = req.body;
     await Bookmark.deleteOne({ _id: id }); //delete from the bookmarks collection
 
-    const user = await User.findOne({_id: userId});
-    user.bookmarks = user.bookmarks.filter(b => b.id !== id);
+    const user = await User.findOne({ _id: userId });
+    user.bookmarks = user.bookmarks.filter((b) => b.id !== id);
     await user.save();
 
     res.send(204).end();
@@ -169,18 +244,23 @@ app.patch("/bookmarks/:id", async (req, res, next) => {
     let { id } = req.params;
     await Bookmark.updateOne(
       { _id: id },
-      {$set: {
-          'title': title, 'desc': desc, 'rating': rating, 'url': url
-      }}
+      {
+        $set: {
+          title: title,
+          desc: desc,
+          rating: rating,
+          url: url,
+        },
+      }
     );
 
-    let updated = await Bookmark.findOne({_id : id});
+    let updated = await Bookmark.findOne({ _id: id });
 
-    const user = await User.findOne({_id: userId});
-    user.bookmarks = user.bookmarks.map(b => {
-      return b.id === id ?  updated : b;
-    })
-    
+    const user = await User.findOne({ _id: userId });
+    user.bookmarks = user.bookmarks.map((b) => {
+      return b.id === id ? updated : b;
+    });
+
     await user.save();
 
     res.send(updated);
