@@ -133,9 +133,9 @@ app.post("/bookmarks", async (req, res, next) => {
     //1.
     let newMark = new Bookmark(newBookmark);
     let mark = await newMark.save();
-    console.log(mark)
 
     //2 and 3.
+
 
     await User.updateOne({ _id: userId }, { $push: { bookmarks: mark } });
 
@@ -146,58 +146,44 @@ app.post("/bookmarks", async (req, res, next) => {
   }
 });
 
-//NOTE: Delete returns only a confirmation that something has been deleted, not the item. Delete client side using method, only if the res is ok.
+
 app.delete("/bookmarks/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    let resp = await Bookmark.deleteOne({ _id: id });
-    res.send(resp);
+    const {userId} = req.body;
+    await Bookmark.deleteOne({ _id: id }); //delete from the bookmarks collection
+
+    const user = await User.findOne({_id: userId});
+    user.bookmarks = user.bookmarks.filter(b => b.id !== id);
+    await user.save();
+
+    res.send(204).end();
   } catch (error) {
     next(error);
   }
 });
 
-//We will be accepting the updated item, and the necessary modifiactions will be shown trhough service method client-side.
-
-/* we need to 
-    1. update the bookmark document
-    2. find the user document
-    3. find the bookmark in the bookmark array
-    4. update the bookmark in the user document. 
-
-    bookid = 5ea71b8e9cde9501df6f9a74
-    userId = 5ea7129dd805a37a738396ad
-*/
-
 app.patch("/bookmarks/:id", async (req, res, next) => {
   try {
     let { title, desc, rating, url, userId } = req.body;
-    console.log(req.body);
     let { id } = req.params;
-    let resp = await Bookmark.updateOne(
+    await Bookmark.updateOne(
       { _id: id },
       {$set: {
           'title': title, 'desc': desc, 'rating': rating, 'url': url
       }}
     );
 
-    await User.update(
-      { _id: userId, "bookmarks._id": id },
-      {
-        $set: {
-          "bookmarks.$": {
-            title: title,
-            desc: desc,
-            rating: rating,
-            url: url,
-          },
-        },
-      },
-    );
+    let updated = await Bookmark.findOne({_id : id});
 
+    const user = await User.findOne({_id: userId});
+    user.bookmarks = user.bookmarks.map(b => {
+      return b.id === id ?  updated : b;
+    })
     
+    await user.save();
 
-    res.send("updated");
+    res.send(updated);
   } catch (error) {
     next(error);
   }
