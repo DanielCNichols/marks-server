@@ -30,20 +30,58 @@ BookmarkRouter.post(
 BookmarkRouter.route('/:id')
   .all(passport.authenticate('jwt', { session: false }))
   .get(async (req, res, next) => {
-    let bookmark = await Bookmark.findById(req.params.id);
-    res.send(bookmark);
+    try {
+      //Check to see if the value is the right type
+      if (mongoose.Types.ObjectId.isValid(req.params.id) !== true) {
+        throw new Error('Not a valid Object Id');
+      }
+
+      let bookmark = await Bookmark.findById(req.params.id);
+
+      if (bookmark === null) {
+        throw new Error('Bookmark not found');
+      }
+      res.send(bookmark);
+    } catch (error) {
+      next(error);
+    }
   })
   .delete(async (req, res, next) => {
-    await Bookmark.findByIdAndDelete(req.params.id);
+    try {
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        throw new Error('Not a valid Object Id');
+      }
 
-    res.send('ok');
+      let deleted = await Bookmark.findByIdAndDelete(req.params.id);
+
+      if (deleted === null) {
+        throw new Error('Bookmark not found');
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
   })
   .patch(async (req, res, next) => {
-    let { bookmark } = req.body;
+    try {
+      let { bookmark } = req.body;
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        throw new Error('Not a valid object id');
+      }
 
-    await Bookmark.findByIdAndUpdate(req.params.id, bookmark);
+      let updated = await Bookmark.findByIdAndUpdate(req.params.id, bookmark, {
+        new: true,
+      });
 
-    res.send('ok');
+      if (!updated) {
+        throw new Error('Bookmark not found');
+      }
+
+      res.send(updated);
+    } catch (error) {
+      next(error);
+    }
   });
 
 module.exports = BookmarkRouter;
