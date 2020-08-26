@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const User = mongoose.model('User');
 
 const options = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  jwtFromRequest: ExtractJwt.fromHeader('authorization'),
   secretOrKey: 'secret',
   algorithms: ['HS256'],
 };
@@ -18,6 +18,7 @@ module.exports = passport => {
             //append the userId to all authenticated requests
             return done(null, user.id);
           }
+          console.log('this is running');
           return done(null, false);
         })
         .catch(err => console.log(err));

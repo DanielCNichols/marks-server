@@ -9,6 +9,8 @@ BookmarkRouter.get(
   '/',
   passport.authenticate('jwt', { session: false }),
   async (req, res, next) => {
+    console.log('cleared');
+    console.log(req.user);
     let bookmarks = await Bookmark.find({ userId: req.user }).exec();
     res.send(bookmarks);
   }
@@ -18,12 +20,14 @@ BookmarkRouter.post(
   '/',
   passport.authenticate('jwt', { session: false }),
   async (req, res, next) => {
+    console.log('in the route');
+    console.log(req.body);
     let { bookmark } = req.body;
     bookmark.userId = req.user;
     const newBookmark = new Bookmark(bookmark);
 
-    newBookmark.save();
-    res.send('ok');
+    let mark = await newBookmark.save();
+    res.send(mark);
   }
 );
 
@@ -33,7 +37,7 @@ BookmarkRouter.route('/:id')
     try {
       //Check to see if the value is the right type
       if (mongoose.Types.ObjectId.isValid(req.params.id) !== true) {
-        throw new Error('Not a valid Object Id');
+        throw new Error('Item not found: Invalid ID');
       }
 
       let bookmark = await Bookmark.findById(req.params.id);
@@ -49,7 +53,7 @@ BookmarkRouter.route('/:id')
   .delete(async (req, res, next) => {
     try {
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        throw new Error('Not a valid Object Id');
+        throw new Error('Item not found: Invalid ID');
       }
 
       let deleted = await Bookmark.findByIdAndDelete(req.params.id);
@@ -65,20 +69,24 @@ BookmarkRouter.route('/:id')
   })
   .patch(async (req, res, next) => {
     try {
-      let { bookmark } = req.body;
+      let { updated } = req.body;
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        throw new Error('Not a valid object id');
+        throw new Error('Item not found:Invalid ID');
       }
 
-      let updated = await Bookmark.findByIdAndUpdate(req.params.id, bookmark, {
-        new: true,
-      });
+      let newBookmark = await Bookmark.findByIdAndUpdate(
+        req.params.id,
+        updated,
+        {
+          new: true,
+        }
+      );
 
-      if (!updated) {
+      if (!newBookmark) {
         throw new Error('Bookmark not found');
       }
 
-      res.send(updated);
+      res.send(newBookmark);
     } catch (error) {
       next(error);
     }

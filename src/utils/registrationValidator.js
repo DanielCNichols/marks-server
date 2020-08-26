@@ -4,15 +4,9 @@ const isEmpty = require('is-empty');
 module.exports = function validateRegistrationInput(data) {
   let errors = {};
 
-  data.name = !isEmpty(data.name) ? data.name : '';
   data.username = !isEmpty(data.username) ? data.username : '';
-  data.email = !isEmpty(data.email) ? data.email : '';
   data.password = !isEmpty(data.password) ? data.password : '';
   data.confirmPass = !isEmpty(data.confirmPass) ? data.confirmPass : '';
-
-  if (Validator.isEmpty(data.name)) {
-    errors.name = 'Name is required';
-  }
 
   if (Validator.isEmpty(data.username)) {
     errors.username = 'Username is required';
@@ -34,6 +28,7 @@ module.exports = function validateRegistrationInput(data) {
     errors.password2 = 'Passwords must match';
   }
 
+  console.log(errors);
   return {
     errors,
     isValid: isEmpty(errors),
