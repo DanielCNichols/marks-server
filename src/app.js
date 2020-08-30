@@ -23,8 +23,6 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-let NODE_ENV = 'test';
-
 app.use(function errorHandler(error, req, res, next) {
   console.log('handling');
   let response;

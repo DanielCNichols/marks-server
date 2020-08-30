@@ -17,7 +17,7 @@ module.exports = function validateRegistrationInput(data) {
   }
 
   if (Validator.isEmpty(data.confirmPass)) {
-    errors.confirmPass = 'Confirm password is required';
+    errors.confirmPass = 'confirmPass is required';
   }
 
   if (!Validator.isLength(data.password, { min: 6, max: 30 })) {

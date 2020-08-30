@@ -1,9 +1,17 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
+let connectString;
 
-mongoose.connect(
-  'mongodb+srv://dcnichols_2020:Psycho78@markit-mp99l.mongodb.net/test?retryWrites=true&w=majority',
-  { useNewUrlParser: true, useUnifiedTopology: true }
-);
+process.env.NODE_ENV === 'test'
+  ? (connectString = process.env.TEST_DATABASE_URL)
+  : (connectString = process.env.DATABASE_URL);
+
+console.log(connectString);
+
+mongoose.connect(connectString, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 mongoose.connection.on('connected', () => {
   console.log('Database Connected');
 });
