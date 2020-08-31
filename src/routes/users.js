@@ -44,8 +44,8 @@ UserRouter.post('/register', bodyParser, async (req, res, next) => {
           newUser.password = hash;
           newUser
             .save()
-            .then((user) => res.send(user))
-            .catch((err) => next(err));
+            .then(user => res.send(user))
+            .catch(err => next(err));
         });
       });
     }
@@ -58,6 +58,7 @@ UserRouter.post('/login', async (req, res, next) => {
   const { errors, isValid } = loginValidator(req.body);
 
   if (!isValid) {
+    console.log('not valid');
     return res.status(400).json(errors);
   }
 
@@ -66,12 +67,11 @@ UserRouter.post('/login', async (req, res, next) => {
   let user = await User.findOne({ username: username });
 
   if (!user) {
+    console.log('user not found');
     return res.status(404).json({ error: 'Invalid username or password' });
   }
 
   let isMatch = await bcrypt.compare(password, user.password);
-
-  console.log('this is the user', user);
 
   if (isMatch) {
     const payload = {
