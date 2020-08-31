@@ -134,6 +134,35 @@ describe('Bookmark endpoints', () => {
           .expect(400);
       });
     });
+
+    it('removes XSS content', async () => {
+      await Bookmark.remove({});
+      await User.remove({});
+      await User.create(testUser);
+
+      let bookmark = {
+        title: 'A Foul Name <script>alert("xss");</script>',
+        url: 'https://www.anasty<script>alert("watchOut")</script>site.com',
+        rating: 2,
+        desc: 'The horror. The horror.',
+      };
+
+      return supertest(app)
+        .post(`/api/bookmarks`)
+        .set('authorization', makeAuthHeader(testUser))
+        .send({ bookmark })
+        .expect(200)
+        .then((res) => {
+          expect(res.body.title).to.eql(
+            'A Foul Name &lt;script&gt;alert("xss");&lt;/script&gt;'
+          );
+          expect(res.body.url).to.eql(
+            'https://www.anasty&lt;script&gt;alert("watchOut")&lt;/script&gt;site.com'
+          );
+          expect(res.body.rating).to.eql(bookmark.rating);
+          expect(res.body.desc).to.eql(bookmark.desc);
+        });
+    });
   });
 
   describe('DELETE /api/bookmarks/:id', () => {
@@ -169,6 +198,123 @@ describe('Bookmark endpoints', () => {
         .expect(204);
     });
   });
+
+  describe('Patch /api/bookmarks/:id', async () => {
+    it('updates the bookmark successfully', async () => {
+      await User.remove({});
+      await Bookmark.remove({});
+      await User.create(testUser);
+      await Bookmark.insertMany(testBookmarks);
+      let updated = {
+        _id: '5f4ce2f90cab770e8c2da014',
+        userId: '5f4cd7b8253939168c917b4b',
+        title: 'be updated',
+        desc: 'get updated',
+        rating: 4,
+        url: 'https://www.updates4dayzzz.com',
+      };
+
+      return supertest(app)
+        .patch(`/api/bookmarks/${updated._id}`)
+        .set('authorization', makeAuthHeader(testUser))
+        .send({ updated })
+        .expect(200)
+        .then((res) => {
+          expect(res.body._id).to.eql(updated._id);
+          expect(res.body.title).to.eql(updated.title);
+          expect(res.body.desc).to.eql(updated.desc);
+          expect(res.body.rating).to.eql(updated.rating);
+          expect(res.body.url).to.eql(updated.url);
+        });
+    });
+
+    const requiredFields = ['title', 'url', 'rating'];
+
+    requiredFields.forEach((field) => {
+      it('rejects with 404 if required fields missing', async () => {
+        await User.remove({});
+        await Bookmark.remove({});
+        await User.create(testUser);
+        await Bookmark.insertMany(testBookmarks);
+
+        let updated = {
+          _id: '5f4ce2f90cab770e8c2da014',
+          userId: '5f4cd7b8253939168c917b4b',
+          title: 'be updated',
+          desc: 'get updated',
+          rating: 4,
+          url: 'https://www.updates4dayzzz.com',
+        };
+
+        delete updated[field];
+
+        return supertest(app)
+          .patch(`/api/bookmarks/${updated._id}`)
+          .set('authorization', makeAuthHeader(testUser))
+          .send({ updated })
+          .expect(400)
+          .then((res) => {
+            expect(res.body.error).to.eql(
+              'Title, url, and rating are required'
+            );
+          });
+      });
+    });
+
+    it('rejects with 401 if invalid credentials', async () => {
+      return supertest(app)
+        .patch(`/api/bookmarks/${testBookmarks[0]._id}`)
+        .expect(401);
+    });
+    it('rejects with 404 if invalid object id', async () => {
+      await User.remove({});
+      await Bookmark.remove({});
+      await User.create(testUser);
+      await Bookmark.insertMany(testBookmarks);
+
+      return supertest(app)
+        .patch(`/api/bookmarks/1234`)
+        .set('authorization', makeAuthHeader(testUser))
+        .expect(404)
+        .then((res) => {
+          expect(res.body.error).to.eql('Invalid ID. Bookmark not found');
+        });
+    });
+
+    it('removes xss content', async () => {
+      await Bookmark.remove({});
+      await User.remove({});
+      await User.create(testUser);
+      await Bookmark.insertMany(testBookmarks);
+
+      let updated = {
+        _id: '5f4ce2f90cab770e8c2da014',
+        userId: '5f4cd7b8253939168c917b4b',
+        title: 'A Foul Name <script>alert("xss");</script>',
+        url: 'https://www.anasty<script>alert("watchOut")</script>site.com',
+        rating: 2,
+        desc: 'The horror. The horror.',
+      };
+
+      return supertest(app)
+        .patch(`/api/bookmarks/${updated._id}`)
+        .set('authorization', makeAuthHeader(testUser))
+        .send({ updated })
+        .expect(200)
+        .then((res) => {
+          expect(res.body.title).to.eql(
+            'A Foul Name &lt;script&gt;alert("xss");&lt;/script&gt;'
+          );
+          expect(res.body.url).to.eql(
+            'https://www.anasty&lt;script&gt;alert("watchOut")&lt;/script&gt;site.com'
+          );
+          expect(res.body.rating).to.eql(updated.rating);
+          expect(res.body.desc).to.eql(updated.desc);
+          expect(res.body.userId).to.eql(updated.userId);
+          expect(res.body._id).to.eql(updated._id);
+        });
+    });
+  });
 });
 
 function makeAuthHeader(user, secret = process.env.JWT_SECRET) {
@@ -180,9 +326,6 @@ function makeAuthHeader(user, secret = process.env.JWT_SECRET) {
       algorithm: 'HS256',
     }
   );
-  console.log('this is the token', token);
+
   return token;
 }
-
-// const token =
-//   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVmNGNkN2I4MjUzOTM5MTY4YzkxN2I0YiIsInVzZXJuYW1lIjoidGVzdGZhY2UiLCJpYXQiOjE1OTg4NzgxMDEsInN1YiI6InRlc3RmYWNlIn0.ZuUKL8MKb4xlnm4psYxHi5xYrFohdvzVf7qhGBm33nA';

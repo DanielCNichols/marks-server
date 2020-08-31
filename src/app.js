@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
 });
 
 app.use(function errorHandler(error, req, res, next) {
-  console.log('handling');
+  console.log('handling the error right here');
   let response;
   if (process.env.NODE_ENV === 'production') {
     response = { error: { message: 'server error' } };

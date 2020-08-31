@@ -28,7 +28,6 @@ module.exports = function validateRegistrationInput(data) {
     errors.password2 = 'Passwords must match';
   }
 
-  console.log(errors);
   return {
     errors,
     isValid: isEmpty(errors),

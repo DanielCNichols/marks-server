@@ -4,6 +4,7 @@ const supertest = require('supertest');
 const User = mongoose.model('User');
 const bcrypt = require('bcryptjs');
 const loginValidator = require('../src/utils/loginValidator');
+const { expect } = require('chai');
 
 const testUser = {
   username: 'testface',
@@ -62,6 +63,26 @@ describe('User endpoints', () => {
         .post('/api/users/register')
         .send(testUser)
         .expect(400);
+    });
+
+    it('removes xss content', async () => {
+      await User.remove({});
+
+      let maliciousAttempt = {
+        username: 'Whata<script>alert(naughty)</script>name',
+        password: 'Pass123',
+        confirmPass: 'Pass123',
+      };
+
+      return supertest(app)
+        .post('/api/users/register')
+        .send(maliciousAttempt)
+        .expect(200)
+        .then((res) => {
+          expect(res.body.username).to.eql(
+            'Whata&lt;script&gt;alert(naughty)&lt;/script&gt;name'
+          );
+        });
     });
   });
 

@@ -6,8 +6,6 @@ process.env.NODE_ENV === 'development'
   ? (connectString = process.env.TEST_DATABASE_URL)
   : (connectString = process.env.DATABASE_URL);
 
-console.log(connectString);
-
 mongoose.connect(connectString, {
   useNewUrlParser: true,
   useUnifiedTopology: true,

@@ -3,6 +3,7 @@ const express = require('express');
 const BookmarkRouter = express.Router();
 const Bookmark = mongoose.model('Bookmark');
 const passport = require('passport');
+const xss = require('xss');
 require('../config/passport')(passport);
 
 BookmarkRouter.get(
@@ -26,14 +27,20 @@ BookmarkRouter.post(
           .status(400)
           .send({ error: 'Title, url, and rating are reqiured' });
       }
-      bookmark.userId = req.user;
-      const newBookmark = new Bookmark(bookmark);
+
+      let cleanedBookmark = {
+        title: xss(bookmark.title),
+        url: xss(bookmark.url),
+        desc: xss(bookmark.desc),
+        rating: xss(bookmark.rating),
+      };
+
+      cleanedBookmark.userId = req.user;
+      const newBookmark = new Bookmark(cleanedBookmark);
 
       let mark = await newBookmark.save();
-      console.log(mark);
       res.send(mark);
     } catch (error) {
-      console.log(error);
       next(error);
     }
   }
@@ -62,19 +69,35 @@ BookmarkRouter.route('/:id')
     try {
       let { updated } = req.body;
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        throw new Error('Item not found:Invalid ID');
+        return res
+          .status(404)
+          .send({ error: 'Invalid ID. Bookmark not found' });
       }
+
+      if (!updated.title || !updated.url || !updated.rating) {
+        return res
+          .status(400)
+          .send({ error: 'Title, url, and rating are required' });
+      }
+
+      let cleanedUpdate = {
+        title: xss(updated.title),
+        desc: xss(updated.desc),
+        rating: xss(updated.rating),
+        url: xss(updated.url),
+        userId: xss(updated.userId),
+      };
 
       let newBookmark = await Bookmark.findByIdAndUpdate(
         req.params.id,
-        updated,
+        cleanedUpdate,
         {
           new: true,
         }
       );
 
       if (!newBookmark) {
-        throw new Error('Bookmark not found');
+        return res.status(400).send({ error: 'Bookmark not found' });
       }
 
       res.send(newBookmark);
