@@ -1,5 +1,4 @@
 const app = require('../src/app');
-// const config = require('../src/config');
 const mongoose = require('mongoose');
 const supertest = require('supertest');
 const User = mongoose.model('User');
@@ -18,10 +17,10 @@ const regUser = {
   confirmPass: 'Pass123',
 };
 
-after('disconnect from db', async () => {
-  mongoose.connection.close();
-});
 describe('User endpoints', () => {
+  // after('disconnect from db', async () => {
+  //   mongoose.connection.close();
+  // });
   describe(`POST /api/users/register`, () => {
     beforeEach('before registter', async () => {
       await User.remove({});
@@ -39,7 +38,7 @@ describe('User endpoints', () => {
     });
 
     const requiredFields = ['username', 'password', 'confirmPass'];
-    requiredFields.forEach(field => {
+    requiredFields.forEach((field) => {
       it('responds with 400 if fields are missing', () => {
         let attempt = {
           username: testUser.username,
@@ -80,15 +79,12 @@ describe('User endpoints', () => {
         password: 'Pass123',
       };
 
-      return supertest(app)
-        .post('/api/users/login')
-        .send(login)
-        .expect(200);
+      return supertest(app).post('/api/users/login').send(login).expect(200);
     });
 
     let requiredFields = ['username', 'password'];
 
-    requiredFields.forEach(field => {
+    requiredFields.forEach((field) => {
       it('rejects if credentials are missing', () => {
         let login = {
           username: testUser.username,
@@ -96,10 +92,7 @@ describe('User endpoints', () => {
         };
         delete login[field];
 
-        supertest(app)
-          .post('/api/users/login')
-          .send(login)
-          .expect(400);
+        supertest(app).post('/api/users/login').send(login).expect(400);
       });
     });
 
@@ -109,10 +102,7 @@ describe('User endpoints', () => {
         password: 'notImportantanyway',
       };
 
-      supertest(app)
-        .post('/api/users/login')
-        .send(login)
-        .expect(400);
+      supertest(app).post('/api/users/login').send(login).expect(400);
     });
 
     it('rejects if invalid password', () => {
@@ -121,10 +111,7 @@ describe('User endpoints', () => {
         password: 'urongdoe',
       };
 
-      supertest(app)
-        .post('/api/users/login')
-        .send(login)
-        .expect(400);
+      supertest(app).post('/api/users/login').send(login).expect(400);
     });
   });
 });

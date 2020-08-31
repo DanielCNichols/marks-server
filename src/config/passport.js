@@ -18,7 +18,6 @@ module.exports = (passport) => {
             //append the userId to all authenticated requests
             return done(null, user.id);
           }
-          console.log('this is running');
           return done(null, false);
         })
         .catch((err) => console.log(err));
