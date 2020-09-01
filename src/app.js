@@ -11,13 +11,20 @@ const UserRouter = require('./routes/users');
 
 const app = express();
 
+const { CLIENT_ORIGIN } = require('./config/config');
+
 const morganSetting = process.env.NODE_ENV === 'production' ? 'tiny' : 'common';
 
+console.log(CLIENT_ORIGIN);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(morganSetting));
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: CLIENT_ORIGIN,
+  })
+);
 app.use('/api/users', UserRouter);
 app.use('/api/bookmarks', BookmarksRouter);
 

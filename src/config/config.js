@@ -6,4 +6,5 @@ module.exports = {
   TEST_DATABASE_URL:
     process.env.TEST_DATABASE_URL || 'mongodb://localhost:27017/marks-test',
   JWT_EXPIRY: process.env.JWT_EXPIRY || '3h',
+  CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || 'http://localhost:3000',
 };
