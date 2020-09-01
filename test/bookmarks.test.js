@@ -17,6 +17,7 @@ const testUser = {
 
 const testBookmarks = [
   {
+    __v: 0,
     _id: '5f4ce2f90cab770e8c2da014',
     userId: '5f4cd7b8253939168c917b4b',
     title: 'test title',
@@ -25,6 +26,7 @@ const testBookmarks = [
     url: 'https://www.reddit.com',
   },
   {
+    __v: 0,
     _id: '5f4ce2f90cab770e8c2da015',
     userId: '5f4cd7b8253939168c917b4b',
     title: 'another test title',
@@ -33,6 +35,7 @@ const testBookmarks = [
     url: 'https://www.reddit.com',
   },
   {
+    __v: 0,
     _id: '5f4ce2f90cab770e8c2da016',
     userId: '5f4cd7b8253939168d917b4b',
     title: 'shouldnt see this title',
@@ -49,14 +52,13 @@ describe('Bookmark endpoints', () => {
       await Bookmark.remove({});
       await User.create(testUser);
 
-      supertest(app)
+      let res = await supertest(app)
         .get('/api/bookmarks')
-        .set('authorization', makeAuthHeader(testUser))
-        .expect(200)
-        .then((res) => {
-          expect(res.body).to.be.an('array');
-          expect(res.body).to.eql([]);
-        });
+        .set('authorization', makeAuthHeader(testUser));
+
+      expect(res.status).to.eql(200);
+      expect(res.body).to.be.an('array');
+      expect(res.body).to.eql([]);
     });
 
     it('responds with a list of bookmarks if present', async () => {
@@ -65,18 +67,19 @@ describe('Bookmark endpoints', () => {
       await User.create(testUser);
       await Bookmark.insertMany(testBookmarks);
 
-      return supertest(app)
+      let res = await supertest(app)
         .get('/api/bookmarks')
-        .set('authorization', makeAuthHeader(testUser))
-        .expect(200)
-        .then((res) => {
-          expect(res.body).to.be.an('array');
-          // expect(res.body).to.eql([]);
-        });
+        .set('authorization', makeAuthHeader(testUser));
+
+      expect(res.status).to.eql(200);
+      expect(res.body).to.be.an('array');
+      expect(res.body).to.eql(testBookmarks.slice(0, -1));
     });
 
-    it('rejects when user is not logged in', () => {
-      return supertest(app).get('/api/bookmarks').expect(401);
+    it('rejects when user is not logged in', async () => {
+      let res = await supertest(app).get('/api/bookmarks');
+
+      expect(res.status).to.eql(401);
     });
   });
 
@@ -94,24 +97,23 @@ describe('Bookmark endpoints', () => {
       await User.create(testUser);
       await Bookmark.insertMany(testBookmarks);
 
-      return supertest(app)
+      let res = await supertest(app)
         .post('/api/bookmarks')
         .set('authorization', makeAuthHeader(testUser))
-        .send({ bookmark })
-        .expect(200)
-        .then((res) => {
-          expect(res.body).to.be.an('object');
-          expect(res.body.userId).to.eql(bookmark.userId);
-          expect(res.body.title).to.eql(bookmark.title);
-          expect(res.body.desc).to.eql(bookmark.desc);
-          expect(res.body.rating).to.eql(bookmark.rating);
-          expect(res.body.url).to.eql(bookmark.url);
-        });
+        .send({ bookmark });
+
+      expect(res.status).to.eql(200);
+      expect(res.body).to.be.an('object');
+      expect(res.body.userId).to.eql(bookmark.userId);
+      expect(res.body.title).to.eql(bookmark.title);
+      expect(res.body.desc).to.eql(bookmark.desc);
+      expect(res.body.rating).to.eql(bookmark.rating);
+      expect(res.body.url).to.eql(bookmark.url);
     });
 
     let requiredFields = ['url', 'title', 'rating'];
 
-    requiredFields.forEach((field) => {
+    requiredFields.forEach(field => {
       it('rejects if title, url, or rating is missing', async () => {
         await User.remove({});
         await Bookmark.remove({});
@@ -127,11 +129,13 @@ describe('Bookmark endpoints', () => {
 
         delete bookmark[field];
 
-        return supertest(app)
+        let res = await supertest(app)
           .post('/api/bookmarks')
           .set('authorization', makeAuthHeader(testUser))
-          .send({ bookmark })
-          .expect(400);
+          .send({ bookmark });
+
+        expect(res.status).to.eql(400);
+        expect(res.body.error).to.eql('Title, url, and rating are required');
       });
     });
 
@@ -147,21 +151,20 @@ describe('Bookmark endpoints', () => {
         desc: 'The horror. The horror.',
       };
 
-      return supertest(app)
+      let res = await supertest(app)
         .post(`/api/bookmarks`)
         .set('authorization', makeAuthHeader(testUser))
-        .send({ bookmark })
-        .expect(200)
-        .then((res) => {
-          expect(res.body.title).to.eql(
-            'A Foul Name &lt;script&gt;alert("xss");&lt;/script&gt;'
-          );
-          expect(res.body.url).to.eql(
-            'https://www.anasty&lt;script&gt;alert("watchOut")&lt;/script&gt;site.com'
-          );
-          expect(res.body.rating).to.eql(bookmark.rating);
-          expect(res.body.desc).to.eql(bookmark.desc);
-        });
+        .send({ bookmark });
+
+      expect(res.status).to.eql(200);
+      expect(res.body.title).to.eql(
+        'A Foul Name &lt;script&gt;alert("xss");&lt;/script&gt;'
+      );
+      expect(res.body.url).to.eql(
+        'https://www.anasty&lt;script&gt;alert("watchOut")&lt;/script&gt;site.com'
+      );
+      expect(res.body.rating).to.eql(bookmark.rating);
+      expect(res.body.desc).to.eql(bookmark.desc);
     });
   });
 
@@ -171,19 +174,21 @@ describe('Bookmark endpoints', () => {
       await Bookmark.remove({});
       await User.create(testUser);
       await Bookmark.insertMany(testBookmarks);
-      return supertest(app)
+
+      let res = await supertest(app)
         .delete('/api/bookmarks/sdf')
-        .set('authorization', makeAuthHeader(testUser))
-        .expect(404)
-        .then((res) => {
-          expect(res.body.error).to.eql('Bookmark not found');
-        });
+        .set('authorization', makeAuthHeader(testUser));
+
+      expect(res.status).to.eql(404);
+      expect(res.body.error).to.eql('Bookmark not found');
     });
 
-    it('rejects if user not logged in', () => {
-      return supertest(app)
-        .delete(`/api/bookmarks/${testBookmarks[1]._id}`)
-        .expect(401);
+    it('rejects if user not logged in', async () => {
+      let res = await supertest(app).delete(
+        `/api/bookmarks/${testBookmarks[1]._id}`
+      );
+
+      expect(res.status).to.eql(401);
     });
 
     it('successfully deletes the bookmark responding 204', async () => {
@@ -192,10 +197,11 @@ describe('Bookmark endpoints', () => {
       await User.create(testUser);
       await Bookmark.insertMany(testBookmarks);
 
-      return supertest(app)
+      let res = await supertest(app)
         .delete(`/api/bookmarks/${testBookmarks[0]._id}`)
-        .set('Authorization', makeAuthHeader(testUser))
-        .expect(204);
+        .set('Authorization', makeAuthHeader(testUser));
+
+      expect(res.status).to.eql(204);
     });
   });
 
@@ -214,24 +220,23 @@ describe('Bookmark endpoints', () => {
         url: 'https://www.updates4dayzzz.com',
       };
 
-      return supertest(app)
+      let res = await supertest(app)
         .patch(`/api/bookmarks/${updated._id}`)
         .set('authorization', makeAuthHeader(testUser))
-        .send({ updated })
-        .expect(200)
-        .then((res) => {
-          expect(res.body._id).to.eql(updated._id);
-          expect(res.body.title).to.eql(updated.title);
-          expect(res.body.desc).to.eql(updated.desc);
-          expect(res.body.rating).to.eql(updated.rating);
-          expect(res.body.url).to.eql(updated.url);
-        });
+        .send({ updated });
+
+      expect(res.status).to.eql(200);
+      expect(res.body._id).to.eql(updated._id);
+      expect(res.body.title).to.eql(updated.title);
+      expect(res.body.desc).to.eql(updated.desc);
+      expect(res.body.rating).to.eql(updated.rating);
+      expect(res.body.url).to.eql(updated.url);
     });
 
     const requiredFields = ['title', 'url', 'rating'];
 
-    requiredFields.forEach((field) => {
-      it('rejects with 404 if required fields missing', async () => {
+    requiredFields.forEach(field => {
+      it('rejects with 400 if required fields missing', async () => {
         await User.remove({});
         await Bookmark.remove({});
         await User.create(testUser);
@@ -248,16 +253,13 @@ describe('Bookmark endpoints', () => {
 
         delete updated[field];
 
-        return supertest(app)
+        let res = await supertest(app)
           .patch(`/api/bookmarks/${updated._id}`)
           .set('authorization', makeAuthHeader(testUser))
-          .send({ updated })
-          .expect(400)
-          .then((res) => {
-            expect(res.body.error).to.eql(
-              'Title, url, and rating are required'
-            );
-          });
+          .send({ updated });
+
+        expect(res.status).to.eql(400);
+        expect(res.body.error).to.eql('Title, url, and rating are required');
       });
     });
 
@@ -272,13 +274,12 @@ describe('Bookmark endpoints', () => {
       await User.create(testUser);
       await Bookmark.insertMany(testBookmarks);
 
-      return supertest(app)
+      let res = await supertest(app)
         .patch(`/api/bookmarks/1234`)
-        .set('authorization', makeAuthHeader(testUser))
-        .expect(404)
-        .then((res) => {
-          expect(res.body.error).to.eql('Invalid ID. Bookmark not found');
-        });
+        .set('authorization', makeAuthHeader(testUser));
+
+      expect(res.status).to.eql(404);
+      expect(res.body.error).to.eql('Invalid ID. Bookmark not found');
     });
 
     it('removes xss content', async () => {
@@ -296,23 +297,22 @@ describe('Bookmark endpoints', () => {
         desc: 'The horror. The horror.',
       };
 
-      return supertest(app)
+      let res = await supertest(app)
         .patch(`/api/bookmarks/${updated._id}`)
         .set('authorization', makeAuthHeader(testUser))
-        .send({ updated })
-        .expect(200)
-        .then((res) => {
-          expect(res.body.title).to.eql(
-            'A Foul Name &lt;script&gt;alert("xss");&lt;/script&gt;'
-          );
-          expect(res.body.url).to.eql(
-            'https://www.anasty&lt;script&gt;alert("watchOut")&lt;/script&gt;site.com'
-          );
-          expect(res.body.rating).to.eql(updated.rating);
-          expect(res.body.desc).to.eql(updated.desc);
-          expect(res.body.userId).to.eql(updated.userId);
-          expect(res.body._id).to.eql(updated._id);
-        });
+        .send({ updated });
+
+      expect(res.status).to.eql(200);
+      expect(res.body.title).to.eql(
+        'A Foul Name &lt;script&gt;alert("xss");&lt;/script&gt;'
+      );
+      expect(res.body.url).to.eql(
+        'https://www.anasty&lt;script&gt;alert("watchOut")&lt;/script&gt;site.com'
+      );
+      expect(res.body.rating).to.eql(updated.rating);
+      expect(res.body.desc).to.eql(updated.desc);
+      expect(res.body.userId).to.eql(updated.userId);
+      expect(res.body._id).to.eql(updated._id);
     });
   });
 });

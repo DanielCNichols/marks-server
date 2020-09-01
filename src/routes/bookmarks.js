@@ -10,8 +10,12 @@ BookmarkRouter.get(
   '/',
   passport.authenticate('jwt', { session: false }),
   async (req, res, next) => {
-    let bookmarks = await Bookmark.find({ userId: req.user }).exec();
-    res.send(bookmarks);
+    try {
+      let bookmarks = await Bookmark.find({ userId: req.user }).exec();
+      res.send(bookmarks);
+    } catch (error) {
+      next(error);
+    }
   }
 );
 
@@ -25,7 +29,7 @@ BookmarkRouter.post(
       if (!bookmark.title || !bookmark.url || !bookmark.rating) {
         return res
           .status(400)
-          .send({ error: 'Title, url, and rating are reqiured' });
+          .send({ error: 'Title, url, and rating are required' });
       }
 
       let cleanedBookmark = {

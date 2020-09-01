@@ -10,7 +10,7 @@ const options = {
   algorithms: ['HS256'],
 };
 
-module.exports = (passport) => {
+module.exports = passport => {
   passport.use(
     new JwtStrategy(options, async (jwt_payload, done) => {
       try {
@@ -21,7 +21,7 @@ module.exports = (passport) => {
         }
         return done(null, false);
       } catch (error) {
-        console.log(error);
+        next(error);
       }
     })
   );
