@@ -9,6 +9,7 @@ require('../config/passport')(passport);
 BookmarkRouter.get(
   '/',
   passport.authenticate('jwt', { session: false }),
+
   async (req, res, next) => {
     try {
       let bookmarks = await Bookmark.find({ userId: req.user }).exec();

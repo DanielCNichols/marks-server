@@ -75,7 +75,7 @@ UserRouter.post('/login', async (req, res, next) => {
 
       jwt.sign(
         payload,
-        'secret',
+        process.env.JWT_SECRET,
         {
           expiresIn: process.env.JWT_EXPIRY,
         },

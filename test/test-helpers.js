@@ -90,14 +90,9 @@ function makeUpdatedBookmark() {
 }
 
 function makeAuthHeader(user, secret = process.env.JWT_SECRET) {
-  const token = jwt.sign(
-    { id: testUser._id, username: testUser.username },
-    secret,
-    {
-      subject: user.username,
-      algorithm: 'HS256',
-    }
-  );
+  const token = jwt.sign({ id: user._id, username: user.username }, 'secret', {
+    expiresIn: 13800,
+  });
 
   return token;
 }

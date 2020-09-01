@@ -11,9 +11,11 @@ const UserRouter = require('./routes/users');
 
 const app = express();
 
+const morganSetting = process.env.NODE_ENV === 'production' ? 'tiny' : 'common';
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('common'));
+app.use(morgan(morganSetting));
 app.use(helmet());
 app.use(cors());
 app.use('/api/users', UserRouter);
@@ -24,7 +26,6 @@ app.get('/', (req, res) => {
 });
 
 app.use(function errorHandler(error, req, res, next) {
-  console.log('handling the error right here');
   let response;
   if (process.env.NODE_ENV === 'production') {
     response = { error: { message: 'server error' } };

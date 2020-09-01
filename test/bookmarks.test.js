@@ -327,5 +327,6 @@ function makeAuthHeader(user, secret = process.env.JWT_SECRET) {
     }
   );
 
-  return token;
+  let header = 'bearer ' + token;
+  return header;
 }
