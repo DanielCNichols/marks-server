@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const xss = require('xss');
 require('../config/passport')(passport);
+const { JWT_EXPIRY, JWT_SECRET } = require('../config/config');
 
 UserRouter.post('/register', bodyParser, async (req, res, next) => {
   try {
@@ -59,6 +60,9 @@ UserRouter.post('/login', async (req, res, next) => {
 
     const { username, password } = req.body;
 
+    console.log('USERNAME', username);
+    console.log('PASSWORD', password);
+
     let user = await User.findOne({ username: username });
 
     if (!user) {
@@ -75,9 +79,9 @@ UserRouter.post('/login', async (req, res, next) => {
 
       jwt.sign(
         payload,
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         {
-          expiresIn: process.env.JWT_EXPIRY,
+          expiresIn: JWT_EXPIRY,
         },
         (err, token) => {
           res.json({

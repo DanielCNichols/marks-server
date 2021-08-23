@@ -1,10 +1,12 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
+const { NODE_ENV, DATABASE_URL, TEST_DATABASE_URL } = require('./config');
 let connectString;
 
-process.env.NODE_ENV === 'development'
-  ? (connectString = process.env.TEST_DATABASE_URL)
-  : (connectString = process.env.DATABASE_URL);
+NODE_ENV === 'development'
+  ? (connectString = TEST_DATABASE_URL)
+  : (connectString = DATABASE_URL);
+
+console.log(connectString);
 
 mongoose.connect(connectString, {
   useNewUrlParser: true,
